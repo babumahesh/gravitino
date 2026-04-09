@@ -80,13 +80,6 @@ public class GravitinoConfig {
   private static final ConfigEntry GRAVITINO_METALAKE =
       new ConfigEntry("gravitino.metalake", "The metalake name for used", "", true);
 
-  private static final ConfigEntry GRAVITINO_USER =
-      new ConfigEntry(
-          "gravitino.user",
-          "The username for simple authentication with the Gravitino server",
-          "",
-          false);
-
   /**
    * @deprecated Please use {@code gravitino.use-single-metalake} instead.
    */
@@ -198,15 +191,6 @@ public class GravitinoConfig {
    */
   public String getMetalake() {
     return config.getOrDefault(GRAVITINO_METALAKE.key, GRAVITINO_METALAKE.defaultValue);
-  }
-
-  /**
-   * Retrieves the username for simple authentication.
-   *
-   * @return the username, or empty string if not configured
-   */
-  public String getUser() {
-    return config.getOrDefault(GRAVITINO_USER.key, GRAVITINO_USER.defaultValue);
   }
 
   /**
@@ -339,12 +323,6 @@ public class GravitinoConfig {
         stringList.add(String.format("\"%s\"='%s'", entry.getKey(), value));
       }
     }
-    // copy the configuration by the prefix of GRAVITINO_CLIENT_CONFIG_PREFIX
-    config.entrySet().stream()
-        .filter(entry -> entry.getKey().startsWith(GRAVITINO_CLIENT_CONFIG_PREFIX.key))
-        .forEach(
-            entry ->
-                stringList.add(String.format("\"%s\"='%s'", entry.getKey(), entry.getValue())));
     return StringUtils.join(stringList, ',');
   }
 
