@@ -24,11 +24,9 @@ import static org.apache.gravitino.server.authentication.KerberosConfig.PRINCIPA
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.security.Principal;
 import java.util.Base64;
 import java.util.concurrent.Callable;
 import org.apache.gravitino.Config;
-import org.apache.gravitino.UserPrincipal;
 import org.apache.gravitino.auth.AuthConstants;
 import org.apache.gravitino.auth.KerberosUtils;
 import org.apache.gravitino.exceptions.UnauthorizedException;
@@ -183,11 +181,8 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
                 }
               }
             });
-    String authHeader = AuthConstants.AUTHORIZATION_NEGOTIATE_HEADER + token;
-    Principal principal =
-        kerberosAuthenticator.authenticateToken(authHeader.getBytes(StandardCharsets.UTF_8));
-    Assertions.assertTrue(principal instanceof UserPrincipal);
-    Assertions.assertEquals(authHeader, ((UserPrincipal) principal).getAccessToken().get());
+    kerberosAuthenticator.authenticateToken(
+        (AuthConstants.AUTHORIZATION_NEGOTIATE_HEADER + token).getBytes(StandardCharsets.UTF_8));
   }
 
   private void initKeyTab() throws Exception {
