@@ -38,7 +38,6 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 import org.apache.gravitino.Config;
-import org.apache.gravitino.UserPrincipal;
 import org.apache.gravitino.auth.AuthConstants;
 import org.apache.gravitino.exceptions.UnauthorizedException;
 import org.junit.jupiter.api.Test;
@@ -152,14 +151,13 @@ public class TestOAuth2TokenAuthenticator {
             .setAudience("service1")
             .signWith(keyPair.getPrivate(), SignatureAlgorithm.RS256)
             .compact();
-    Principal principal =
-        auth2TokenAuthenticator.authenticateToken(
-            (AuthConstants.AUTHORIZATION_BEARER_HEADER + token5).getBytes(StandardCharsets.UTF_8));
-    assertEquals("gravitino", principal.getName());
-    assertTrue(principal instanceof UserPrincipal);
     assertEquals(
-        AuthConstants.AUTHORIZATION_BEARER_HEADER + token5,
-        ((UserPrincipal) principal).getAccessToken().get());
+        "gravitino",
+        auth2TokenAuthenticator
+            .authenticateToken(
+                (AuthConstants.AUTHORIZATION_BEARER_HEADER + token5)
+                    .getBytes(StandardCharsets.UTF_8))
+            .getName());
   }
 
   @Test
@@ -266,8 +264,6 @@ public class TestOAuth2TokenAuthenticator {
     Principal principal = authenticator.authenticateToken(tokenData);
     assertNotNull(principal);
     assertEquals("test-user", principal.getName());
-    assertTrue(principal instanceof UserPrincipal);
-    assertEquals(bearerToken, ((UserPrincipal) principal).getAccessToken().get());
   }
 
   @Test

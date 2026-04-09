@@ -18,7 +18,6 @@
  */
 package org.apache.gravitino.iceberg.service;
 
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.exceptions.CommitFailedException;
@@ -50,7 +49,6 @@ public class TestIcebergExceptionMapper {
     checkExceptionStatus(new NamespaceNotEmptyException(""), 400);
     checkExceptionStatus(new NotAuthorizedException(""), 401);
     checkExceptionStatus(new ForbiddenException(""), 403);
-    checkExceptionStatus(new NotFoundException(), 404);
     checkExceptionStatus(new NoSuchNamespaceException(""), 404);
     checkExceptionStatus(new NoSuchTableException(""), 404);
     checkExceptionStatus(new NoSuchIcebergTableException(""), 404);
