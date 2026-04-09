@@ -287,41 +287,17 @@ public abstract class BaseCatalog<T extends BaseCatalog>
 
   @Override
   public void close() throws IOException {
-    IOException firstException = null;
     if (ops != null) {
-      try {
-        ops.close();
-      } catch (IOException e) {
-        firstException = e;
-      }
+      ops.close();
       ops = null;
     }
     if (authorizationPlugin != null) {
-      try {
-        authorizationPlugin.close();
-      } catch (IOException e) {
-        if (firstException != null) {
-          firstException.addSuppressed(e);
-        } else {
-          firstException = e;
-        }
-      }
+      authorizationPlugin.close();
       authorizationPlugin = null;
     }
     if (catalogCredentialManager != null) {
-      try {
-        catalogCredentialManager.close();
-      } catch (Exception e) {
-        if (firstException != null) {
-          firstException.addSuppressed(e);
-        } else {
-          firstException = new IOException(e);
-        }
-      }
+      catalogCredentialManager.close();
       catalogCredentialManager = null;
-    }
-    if (firstException != null) {
-      throw firstException;
     }
   }
 
