@@ -81,9 +81,6 @@ public class StatisticOperations {
 
   private static final Logger LOG = LoggerFactory.getLogger(StatisticOperations.class);
 
-  private static final String NULL_STATS_UPDATE_REQUEST_BODY_ERROR =
-      "Statistics update request body cannot be null";
-
   @Context private HttpServletRequest httpRequest;
 
   private final StatisticDispatcher statisticDispatcher;
@@ -163,9 +160,6 @@ public class StatisticOperations {
       return Utils.doAs(
           httpRequest,
           () -> {
-            if (request == null) {
-              throw new IllegalArgumentException(NULL_STATS_UPDATE_REQUEST_BODY_ERROR);
-            }
             request.validate();
             MetadataObject object =
                 MetadataObjects.parse(
