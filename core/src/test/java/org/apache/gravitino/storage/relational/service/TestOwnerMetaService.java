@@ -37,7 +37,6 @@ import org.apache.gravitino.meta.AuditInfo;
 import org.apache.gravitino.meta.BaseMetalake;
 import org.apache.gravitino.meta.CatalogEntity;
 import org.apache.gravitino.meta.FilesetEntity;
-import org.apache.gravitino.meta.GenericEntity;
 import org.apache.gravitino.meta.GroupEntity;
 import org.apache.gravitino.meta.ModelEntity;
 import org.apache.gravitino.meta.RoleEntity;
@@ -248,12 +247,6 @@ class TestOwnerMetaService extends TestJDBCBackend {
             null,
             AUDIT_INFO);
     backend.insert(model, false);
-    GenericEntity view =
-        createViewEntity(
-            RandomIdGenerator.INSTANCE.nextId(),
-            Namespace.of(TestOwnerMetaService.METALAKE_NAME, CATALOG_NAME, SCHEMA_NAME),
-            "view");
-    backend.insert(view, false);
 
     UserEntity user =
         createUserEntity(
@@ -275,45 +268,38 @@ class TestOwnerMetaService extends TestJDBCBackend {
         .setOwner(topic.nameIdentifier(), topic.type(), user.nameIdentifier(), user.type());
     OwnerMetaService.getInstance()
         .setOwner(model.nameIdentifier(), model.type(), user.nameIdentifier(), user.type());
-    OwnerMetaService.getInstance()
-        .setOwner(view.nameIdentifier(), view.type(), user.nameIdentifier(), user.type());
 
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
-    Assertions.assertEquals(7, countActiveOwnerRel(user.id()));
-
-    // Test to delete view
-    ViewMetaService.getInstance().deleteView(view.nameIdentifier());
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(6, countActiveOwnerRel(user.id()));
 
     // Test to delete model
     ModelMetaService.getInstance().deleteModel(model.nameIdentifier());
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(5, countActiveOwnerRel(user.id()));
 
     // Test to delete table
     TableMetaService.getInstance().deleteTable(table.nameIdentifier());
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(4, countActiveOwnerRel(user.id()));
 
     // Test to delete topic
     TopicMetaService.getInstance().deleteTopic(topic.nameIdentifier());
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(3, countActiveOwnerRel(user.id()));
 
     // Test to delete fileset
     FilesetMetaService.getInstance().deleteFileset(fileset.nameIdentifier());
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(2, countActiveOwnerRel(user.id()));
 
     // Test to delete schema
     SchemaMetaService.getInstance().deleteSchema(schema.nameIdentifier(), false);
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(1, countActiveOwnerRel(user.id()));
 
     // Test to delete catalog
     CatalogMetaService.getInstance().deleteCatalog(catalog.nameIdentifier(), false);
-    Assertions.assertEquals(7, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(6, countAllOwnerRel(user.id()));
     Assertions.assertEquals(0, countActiveOwnerRel(user.id()));
 
     // Test to delete catalog with cascade mode
@@ -364,12 +350,6 @@ class TestOwnerMetaService extends TestJDBCBackend {
             null,
             AUDIT_INFO);
     backend.insert(model, false);
-    view =
-        createViewEntity(
-            RandomIdGenerator.INSTANCE.nextId(),
-            Namespace.of(TestOwnerMetaService.METALAKE_NAME, CATALOG_NAME, SCHEMA_NAME),
-            "view");
-    backend.insert(view, false);
 
     OwnerMetaService.getInstance()
         .setOwner(catalog.nameIdentifier(), catalog.type(), user.nameIdentifier(), user.type());
@@ -383,11 +363,9 @@ class TestOwnerMetaService extends TestJDBCBackend {
         .setOwner(topic.nameIdentifier(), topic.type(), user.nameIdentifier(), user.type());
     OwnerMetaService.getInstance()
         .setOwner(model.nameIdentifier(), model.type(), user.nameIdentifier(), user.type());
-    OwnerMetaService.getInstance()
-        .setOwner(view.nameIdentifier(), view.type(), user.nameIdentifier(), user.type());
 
     CatalogMetaService.getInstance().deleteCatalog(catalog.nameIdentifier(), true);
-    Assertions.assertEquals(14, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(12, countAllOwnerRel(user.id()));
     Assertions.assertEquals(0, countActiveOwnerRel(user.id()));
 
     // Test to delete schema with cascade mode
@@ -442,13 +420,6 @@ class TestOwnerMetaService extends TestJDBCBackend {
             AUDIT_INFO);
     backend.insert(model, false);
 
-    view =
-        createViewEntity(
-            RandomIdGenerator.INSTANCE.nextId(),
-            Namespace.of(TestOwnerMetaService.METALAKE_NAME, CATALOG_NAME, SCHEMA_NAME),
-            "view");
-    backend.insert(view, false);
-
     OwnerMetaService.getInstance()
         .setOwner(schema.nameIdentifier(), schema.type(), user.nameIdentifier(), user.type());
     OwnerMetaService.getInstance()
@@ -461,11 +432,9 @@ class TestOwnerMetaService extends TestJDBCBackend {
         .setOwner(topic.nameIdentifier(), topic.type(), user.nameIdentifier(), user.type());
     OwnerMetaService.getInstance()
         .setOwner(model.nameIdentifier(), model.type(), user.nameIdentifier(), user.type());
-    OwnerMetaService.getInstance()
-        .setOwner(view.nameIdentifier(), view.type(), user.nameIdentifier(), user.type());
 
     SchemaMetaService.getInstance().deleteSchema(schema.nameIdentifier(), true);
-    Assertions.assertEquals(21, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(18, countAllOwnerRel(user.id()));
     Assertions.assertEquals(1, countActiveOwnerRel(user.id()));
 
     // Test to delete user
@@ -497,6 +466,7 @@ class TestOwnerMetaService extends TestJDBCBackend {
             Namespace.of(TestOwnerMetaService.METALAKE_NAME, CATALOG_NAME, SCHEMA_NAME),
             "topic",
             AUDIT_INFO);
+
     backend.insert(topic, false);
 
     model =
@@ -510,13 +480,6 @@ class TestOwnerMetaService extends TestJDBCBackend {
             AUDIT_INFO);
     backend.insert(model, false);
 
-    view =
-        createViewEntity(
-            RandomIdGenerator.INSTANCE.nextId(),
-            Namespace.of(TestOwnerMetaService.METALAKE_NAME, CATALOG_NAME, SCHEMA_NAME),
-            "view");
-    backend.insert(view, false);
-
     OwnerMetaService.getInstance()
         .setOwner(schema.nameIdentifier(), schema.type(), user.nameIdentifier(), user.type());
     OwnerMetaService.getInstance()
@@ -529,11 +492,9 @@ class TestOwnerMetaService extends TestJDBCBackend {
         .setOwner(topic.nameIdentifier(), topic.type(), user.nameIdentifier(), user.type());
     OwnerMetaService.getInstance()
         .setOwner(model.nameIdentifier(), model.type(), user.nameIdentifier(), user.type());
-    OwnerMetaService.getInstance()
-        .setOwner(view.nameIdentifier(), view.type(), user.nameIdentifier(), user.type());
 
     UserMetaService.getInstance().deleteUser(user.nameIdentifier());
-    Assertions.assertEquals(28, countAllOwnerRel(user.id()));
+    Assertions.assertEquals(24, countAllOwnerRel(user.id()));
     Assertions.assertEquals(0, countActiveOwnerRel(user.id()));
   }
 
