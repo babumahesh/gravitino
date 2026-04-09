@@ -60,17 +60,9 @@ spec:
             - "/bin/bash"
             - "/tmp/conf/init.sh"
           # Environment variables
+          {{- if .Values.env }}
           env:
-            - name: GRAVITINO_HOME
-              value: /root/gravitino-lance-rest-server
-            - name: SKIP_CONFIG_REWRITE
-              value: "true"
-          {{- with .Values.env }}
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- range $item := .Values.envWithTpl }}
-            - name: {{ $item.name }}
-              value: {{ tpl $item.value $ | quote }}
+            {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
           {{- with .Values.envFrom }}
           envFrom:
