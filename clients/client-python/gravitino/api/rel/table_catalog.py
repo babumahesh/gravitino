@@ -18,9 +18,8 @@
 
 from abc import ABC, abstractmethod
 from contextlib import suppress
-from typing import Optional, overload
+from typing import Optional
 
-from gravitino.api.authorization.privileges import Privilege
 from gravitino.api.rel.column import Column
 from gravitino.api.rel.expressions.distributions.distribution import Distribution
 from gravitino.api.rel.expressions.sorts.sort_order import SortOrder
@@ -55,28 +54,12 @@ class TableCatalog(ABC):
             NoSuchSchemaException: If the schema does not exist.
         """
 
-    @overload
     @abstractmethod
-    def load_table(self, identifier: NameIdentifier) -> Table: ...
-
-    @overload
-    @abstractmethod
-    def load_table(
-        self, identifier: NameIdentifier, required_privilege_names: set[Privilege.Name]
-    ) -> Table: ...
-
-    @abstractmethod
-    def load_table(
-        self,
-        identifier: NameIdentifier,
-        required_privilege_names: Optional[set[Privilege.Name]] = None,
-    ) -> Table:
-        """Load table metadata by `NameIdentifier` from the catalog with required privileges.
+    def load_table(self, identifier: NameIdentifier) -> Table:
+        """Load table metadata by `NameIdentifier` from the catalog.
 
         Args:
             identifier (NameIdentifier): A table identifier.
-            required_privilege_names (Optional[set[Privilege.Name]], optional):
-                The required privilege names to access the table. Defaults to `None`.
 
         Returns:
             Table: The table metadata.
