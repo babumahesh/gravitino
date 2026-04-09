@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Singleton;
 import javax.servlet.Servlet;
 import org.apache.gravitino.Configs;
@@ -88,8 +87,6 @@ public class GravitinoServer extends ResourceConfig {
   private final GravitinoEnv gravitinoEnv;
 
   private final LineageService lineageService;
-
-  private final AtomicBoolean isStopped = new AtomicBoolean(false);
 
   public GravitinoServer(ServerConfig config, GravitinoEnv gravitinoEnv) {
     this.serverConfig = config;
@@ -201,13 +198,6 @@ public class GravitinoServer extends ResourceConfig {
     }
   }
 
-  void gracefulStop() throws IOException {
-    if (!isStopped.compareAndSet(false, true)) {
-      return;
-    }
-    stop();
-  }
-
   public static void main(String[] args) {
     LOG.info("Starting Gravitino Server");
     String confPath = System.getenv("GRAVITINO_TEST") == null ? "" : args[0];
@@ -229,8 +219,8 @@ public class GravitinoServer extends ResourceConfig {
             new Thread(
                 () -> {
                   try {
+                    // Register some clean-up tasks that need to be done before shutting down
                     Thread.sleep(server.serverConfig.get(ServerConfig.SERVER_SHUTDOWN_TIMEOUT));
-                    server.gracefulStop();
                   } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     LOG.error("Interrupted exception:", e);
@@ -243,7 +233,7 @@ public class GravitinoServer extends ResourceConfig {
 
     LOG.info("Shutting down Gravitino Server ... ");
     try {
-      server.gracefulStop();
+      server.stop();
       LOG.info("Gravitino Server has shut down.");
     } catch (Exception e) {
       LOG.error("Error while stopping Gravitino Server", e);
