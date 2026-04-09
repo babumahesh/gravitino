@@ -60,12 +60,12 @@ public interface GroupRoleRelMapper {
   @UpdateProvider(
       type = GroupRoleRelSQLProviderFactory.class,
       method = "softDeleteGroupRoleRelByMetalakeId")
-  void softDeleteGroupRoleRelByMetalakeId(@Param("metalakeId") Long metalakeId);
+  void softDeleteGroupRoleRelByMetalakeId(Long metalakeId);
 
   @UpdateProvider(
       type = GroupRoleRelSQLProviderFactory.class,
       method = "softDeleteGroupRoleRelByRoleId")
-  void softDeleteGroupRoleRelByRoleId(@Param("roleId") Long roleId);
+  void softDeleteGroupRoleRelByRoleId(Long roleId);
 
   @UpdateProvider(
       type = GroupRoleRelSQLProviderFactory.class,

@@ -56,7 +56,7 @@ public interface RoleMetaMapper {
   List<RolePO> listRolesByUserId(@Param("userId") Long userId);
 
   @SelectProvider(type = RoleMetaSQLProviderFactory.class, method = "listRolesByGroupId")
-  List<RolePO> listRolesByGroupId(@Param("groupId") Long groupId);
+  List<RolePO> listRolesByGroupId(Long groupId);
 
   @SelectProvider(
       type = RoleMetaSQLProviderFactory.class,
@@ -81,7 +81,7 @@ public interface RoleMetaMapper {
       @Param("newRoleMeta") RolePO newRolePO, @Param("oldRoleMeta") RolePO oldRolePO);
 
   @UpdateProvider(type = RoleMetaSQLProviderFactory.class, method = "softDeleteRoleMetaByRoleId")
-  void softDeleteRoleMetaByRoleId(@Param("roleId") Long roleId);
+  void softDeleteRoleMetaByRoleId(Long roleId);
 
   @UpdateProvider(
       type = RoleMetaSQLProviderFactory.class,
