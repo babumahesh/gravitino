@@ -30,7 +30,6 @@ import org.apache.gravitino.utils.MetadataObjectUtil;
 @DeveloperApi
 public class GetTagForMetadataObjectFailureEvent extends TagFailureEvent {
 
-  private final String tagName;
   /**
    * Constructs a new {@code GetTagForMetadataObjectFailureEvent} instance.
    *
@@ -48,7 +47,6 @@ public class GetTagForMetadataObjectFailureEvent extends TagFailureEvent {
       String name,
       Exception exception) {
     super(user, MetadataObjectUtil.toEntityIdent(metalake, metadataObject), exception);
-    this.tagName = name;
   }
 
   /**
@@ -59,14 +57,5 @@ public class GetTagForMetadataObjectFailureEvent extends TagFailureEvent {
   @Override
   public OperationType operationType() {
     return OperationType.GET_TAG_FOR_METADATA_OBJECT;
-  }
-
-  /**
-   * Returns the name of the tag whose lookup failed.
-   *
-   * @return the tag name.
-   */
-  public String tagName() {
-    return tagName;
   }
 }
