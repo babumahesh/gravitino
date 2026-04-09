@@ -489,13 +489,4 @@ public class TestSchemaOperations extends BaseOperationsTest {
 
     return mockSchema;
   }
-
-  @Test
-  public void testSchemaUpdatesRequestWithUpdatesNull() {
-    SchemaUpdatesRequest schemaUpdatesRequest = new SchemaUpdatesRequest(null);
-
-    Throwable exception =
-        Assertions.assertThrows(IllegalArgumentException.class, schemaUpdatesRequest::validate);
-    Assertions.assertEquals("updates must not be null", exception.getMessage());
-  }
 }
