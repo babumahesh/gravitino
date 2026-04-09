@@ -52,7 +52,7 @@ public class IcebergNamespaceTestBase extends IcebergTestBase {
         .post(Entity.entity(request, MediaType.APPLICATION_JSON_TYPE));
   }
 
-  protected Response doRegisterTable(String tableName, Namespace ns) {
+  private Response doRegisterTable(String tableName, Namespace ns) {
     RegisterTableRequest request =
         ImmutableRegisterTableRequest.builder().name(tableName).metadataLocation("mock").build();
     return getNamespaceClientBuilder(Optional.of(ns), Optional.of("register"), Optional.empty())
