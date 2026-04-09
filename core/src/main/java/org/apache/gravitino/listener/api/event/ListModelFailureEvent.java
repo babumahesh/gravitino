@@ -29,8 +29,6 @@ import org.apache.gravitino.annotation.DeveloperApi;
  */
 @DeveloperApi
 public class ListModelFailureEvent extends ModelFailureEvent {
-  private static final String LIST_MODEL_NAME = "__list_models__";
-
   private final Namespace namespace;
 
   /**
@@ -41,7 +39,7 @@ public class ListModelFailureEvent extends ModelFailureEvent {
    * @param exception The exception encountered during the attempt to list models.
    */
   public ListModelFailureEvent(String user, Namespace namespace, Exception exception) {
-    super(user, NameIdentifier.of(namespace, LIST_MODEL_NAME), exception);
+    super(user, NameIdentifier.of(namespace.levels()), exception);
     this.namespace = namespace;
   }
 
