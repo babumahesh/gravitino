@@ -99,9 +99,10 @@ public class RemoveModelVersionProperty extends Command {
     }
 
     if (alias != null) {
-      printInformation(model + " alias " + alias + " property " + property + " removed.");
+      printInformation(model + " alias " + alias + "property " + property + " property removed.");
     } else {
-      printInformation(model + " version " + version + " property " + property + " removed.");
+      printInformation(
+          model + " version " + version + "property " + property + " property removed.");
     }
   }
 
