@@ -18,5 +18,4 @@ Apache Gravitino Trino connector index:
     - [PostgreSQL](catalog-postgresql.md)
   - [Trino cascading query](trino-cascading-query.md)
   - [Supported SQL](sql-support.md)
-  - [UDF support](udf-support.md)
   - [Development](development.md)
