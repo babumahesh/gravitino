@@ -455,7 +455,12 @@ public class StatisticOperations {
           fullName,
           metalake,
           e);
-      String partitions = getDropPartitionNames(request);
+      String partitions =
+          StringUtils.joinWith(
+              ",",
+              request.getDrops().stream()
+                  .map(PartitionStatisticsDropDTO::partitionName)
+                  .collect(Collectors.toList()));
       return ExceptionHandlers.handlePartitionStatsException(
           OperationType.DROP, partitions, fullName, e);
     }
@@ -508,18 +513,6 @@ public class StatisticOperations {
         ",",
         request.getUpdates().stream()
             .map(PartitionStatisticsUpdateDTO::partitionName)
-            .collect(Collectors.toList()));
-  }
-
-  private static String getDropPartitionNames(PartitionStatisticsDropRequest request) {
-    if (request == null || request.getDrops() == null) {
-      return "";
-    }
-
-    return StringUtils.joinWith(
-        ",",
-        request.getDrops().stream()
-            .map(PartitionStatisticsDropDTO::partitionName)
             .collect(Collectors.toList()));
   }
 }
