@@ -24,10 +24,10 @@ import java.util.Optional;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import org.apache.gravitino.catalog.lakehouse.iceberg.IcebergConstants;
 import org.apache.iceberg.rest.responses.ConfigResponse;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -38,8 +38,10 @@ public class TestIcebergConfig extends IcebergTestBase {
     return IcebergRestTestUtil.getIcebergResourceConfig(IcebergConfigOperations.class);
   }
 
-  @Test
-  public void testConfig() {
+  @ParameterizedTest
+  @ValueSource(strings = {"", IcebergRestTestUtil.PREFIX})
+  public void testConfig(String prefix) {
+    setUrlPathWithPrefix(prefix);
     Response resp = getConfigClientBuilder().get();
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
     Assertions.assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getMediaType());
@@ -49,8 +51,10 @@ public class TestIcebergConfig extends IcebergTestBase {
     Assertions.assertEquals(0, response.overrides().size());
   }
 
-  @Test
-  public void testConfigWithEmptyWarehouse() {
+  @ParameterizedTest
+  @ValueSource(strings = {"", IcebergRestTestUtil.PREFIX})
+  public void testConfigWithEmptyWarehouse(String prefix) {
+    setUrlPathWithPrefix(prefix);
     Map<String, String> queryParams = ImmutableMap.of("warehouse", "");
     Response resp =
         getIcebergClientBuilder(IcebergRestTestUtil.CONFIG_PATH, Optional.of(queryParams)).get();
@@ -62,8 +66,10 @@ public class TestIcebergConfig extends IcebergTestBase {
     Assertions.assertEquals(0, response.overrides().size());
   }
 
-  @Test
-  public void testConfigWithValidWarehouse() {
+  @ParameterizedTest
+  @ValueSource(strings = {"", IcebergRestTestUtil.PREFIX})
+  public void testConfigWithValidWarehouse(String prefix) {
+    setUrlPathWithPrefix(prefix);
     String warehouseName = IcebergRestTestUtil.PREFIX;
     Map<String, String> queryParams = ImmutableMap.of("warehouse", warehouseName);
     Response resp =
@@ -98,18 +104,26 @@ public class TestIcebergConfig extends IcebergTestBase {
     Assertions.assertEquals(404, resp.getStatus());
   }
 
-  @Test
-  public void testConfigRejectsPrefixInUrl() {
-    // Per the Iceberg REST spec, the config endpoint does not accept a prefix.
-    String path = injectPrefixToPath(IcebergRestTestUtil.CONFIG_PATH, IcebergRestTestUtil.PREFIX);
+  @ParameterizedTest
+  @ValueSource(strings = {"PREFIX", "", "\\\n\t\\\'", "\u0024", "\100", "[_~"})
+  void testIcebergRestValidPrefix(String prefix) {
+    String path = injectPrefixToPath(IcebergRestTestUtil.CONFIG_PATH, prefix);
     Response response = getIcebergClientBuilder(path, Optional.empty()).get();
-    // Jersey returns 500 (not 404) for unmatched routes because the
-    // IcebergExceptionMapper converts the NotFoundException into an internal error response.
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"/", "hello/"})
+  void testIcebergRestInvalidPrefix(String prefix) {
+    String path = injectPrefixToPath(IcebergRestTestUtil.CONFIG_PATH, prefix);
+    Response response = getIcebergClientBuilder(path, Optional.empty()).get();
     Assertions.assertEquals(500, response.getStatus());
   }
 
-  @Test
-  public void testConfigEndpointsContainViewOperations() {
+  @ParameterizedTest
+  @ValueSource(strings = {"", IcebergRestTestUtil.PREFIX})
+  public void testConfigEndpointsContainViewOperations(String prefix) {
+    setUrlPathWithPrefix(prefix);
     String warehouseName = IcebergRestTestUtil.PREFIX;
     Map<String, String> queryParams = ImmutableMap.of("warehouse", warehouseName);
     Response resp =
