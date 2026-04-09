@@ -63,7 +63,7 @@ public class RoleMetaSQLProviderFactory {
     return getProvider().listRolesByUserId(userId);
   }
 
-  public static String listRolesByGroupId(@Param("groupId") Long groupId) {
+  public static String listRolesByGroupId(Long groupId) {
     return getProvider().listRolesByGroupId(groupId);
   }
 
@@ -89,7 +89,7 @@ public class RoleMetaSQLProviderFactory {
     return getProvider().updateRoleMeta(newRolePO, oldRolePO);
   }
 
-  public static String softDeleteRoleMetaByRoleId(@Param("roleId") Long roleId) {
+  public static String softDeleteRoleMetaByRoleId(Long roleId) {
     return getProvider().softDeleteRoleMetaByRoleId(roleId);
   }
 

@@ -97,7 +97,7 @@ public class GroupRoleRelBaseSQLProvider {
         + "</script>";
   }
 
-  public String softDeleteGroupRoleRelByMetalakeId(@Param("metalakeId") Long metalakeId) {
+  public String softDeleteGroupRoleRelByMetalakeId(Long metalakeId) {
     return "UPDATE "
         + GROUP_ROLE_RELATION_TABLE_NAME
         + " SET deleted_at = (UNIX_TIMESTAMP() * 1000.0)"
@@ -108,7 +108,7 @@ public class GroupRoleRelBaseSQLProvider {
         + " AND deleted_at = 0";
   }
 
-  public String softDeleteGroupRoleRelByRoleId(@Param("roleId") Long roleId) {
+  public String softDeleteGroupRoleRelByRoleId(Long roleId) {
     return "UPDATE "
         + GROUP_ROLE_RELATION_TABLE_NAME
         + " SET deleted_at = (UNIX_TIMESTAMP() * 1000.0)"
