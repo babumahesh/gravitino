@@ -24,10 +24,7 @@ gravitino_dir="$(cd "${bin_dir}/../">/dev/null; pwd)"
 
 cd ${gravitino_dir}
 
-# Skip config rewrite if SKIP_CONFIG_REWRITE is set (e.g., in Kubernetes)
-if [ "${SKIP_CONFIG_REWRITE}" != "true" ]; then
-  python bin/rewrite_gravitino_server_config.py
-fi
+python bin/rewrite_gravitino_server_config.py
 
 # Create soft links for JDBC drivers
 jdbc_driver_dir="${gravitino_dir}/jdbc-drivers"
