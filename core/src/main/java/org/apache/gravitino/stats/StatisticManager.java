@@ -384,7 +384,7 @@ public class StatisticManager implements Closeable, StatisticDispatcher {
 
     @Override
     public Optional<StatisticValue<?>> value() {
-      return Optional.ofNullable(value);
+      return Optional.of(value);
     }
 
     @Override
