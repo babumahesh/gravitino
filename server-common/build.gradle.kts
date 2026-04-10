@@ -54,6 +54,7 @@ dependencies {
   implementation(libs.ognl)
   implementation(libs.prometheus.servlet)
   implementation(libs.nimbus.jose.jwt)
+  implementation(libs.google.auth.http)
 
   testImplementation(libs.commons.io)
   testImplementation(libs.junit.jupiter.api)

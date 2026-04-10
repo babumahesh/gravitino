@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.gravitino.Config;
 import org.apache.gravitino.Configs;
 import org.apache.gravitino.auth.AuthenticatorType;
+import org.apache.gravitino.server.authentication.google.GoogleAuthenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,13 +35,20 @@ public class AuthenticatorFactory {
   private static final Logger LOG = LoggerFactory.getLogger(AuthenticatorFactory.class);
 
   public static final ImmutableMap<String, String> AUTHENTICATORS =
-      ImmutableMap.of(
-          AuthenticatorType.SIMPLE.name().toLowerCase(),
-          SimpleAuthenticator.class.getCanonicalName(),
-          AuthenticatorType.OAUTH.name().toLowerCase(),
-          OAuth2TokenAuthenticator.class.getCanonicalName(),
-          AuthenticatorType.KERBEROS.name().toLowerCase(),
-          KerberosAuthenticator.class.getCanonicalName());
+      ImmutableMap.<String, String>builder()
+          .put(
+              AuthenticatorType.SIMPLE.name().toLowerCase(),
+              SimpleAuthenticator.class.getCanonicalName())
+          .put(
+              AuthenticatorType.OAUTH.name().toLowerCase(),
+              OAuth2TokenAuthenticator.class.getCanonicalName())
+          .put(
+              AuthenticatorType.KERBEROS.name().toLowerCase(),
+              KerberosAuthenticator.class.getCanonicalName())
+          .put(
+              AuthenticatorType.GOOGLE.name().toLowerCase(),
+              GoogleAuthenticator.class.getCanonicalName())
+          .build();
 
   private AuthenticatorFactory() {}
 

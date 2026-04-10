@@ -31,5 +31,8 @@ public enum AuthenticatorType {
   OAUTH,
 
   /** Authentication that uses Kerberos. */
-  KERBEROS
+  KERBEROS,
+
+  /** Authentication that uses Google OAuth2 tokens. */
+  GOOGLE
 }
