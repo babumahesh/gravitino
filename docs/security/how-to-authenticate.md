@@ -1,13 +1,13 @@
 ---
 title: "How to authenticate"
 slug: /security/how-to-authenticate
-keyword: security authentication oauth kerberos
+keyword: security authentication oauth kerberos google
 license: "This software is licensed under the Apache License version 2."
 ---
 
 ## Authentication
 
-Apache Gravitino supports three kinds of authentication mechanisms: simple, OAuth and Kerberos.
+Apache Gravitino supports four kinds of authentication mechanisms: simple, OAuth, Kerberos, and Google.
 If you don't enable authentication for your client and server explicitly, the user `anonymous` will be used to access the server.
 
 ### Simple mode
@@ -99,6 +99,106 @@ GravitinoClient client = GravitinoClient.builder(uri)
 Currently, the Iceberg REST service does not support Kerberos authentication.
 The URI must be the server's hostname instead of its IP address.
 :::
+
+### Google mode
+
+Google authentication allows clients to authenticate using Google Cloud Platform (GCP) service account credentials. This is particularly useful for Spark Iceberg REST catalog integrations with GCP. Gravitino supports multiple credential types:
+
+- **Service Account Key Files** - JSON key files (works anywhere)
+- **Workload Identity** - Automatic credential injection on GKE (recommended for production)
+- **Application Default Credentials (ADC)** - Automatic credential detection across all GCP environments
+
+:::info
+Gravitino validates **Google ID tokens** (JWT format), not access tokens. ID tokens contain identity claims (email, issuer) and are signed by Google's identity provider. Access tokens are opaque strings used only for Google API authorization.
+:::
+
+On the server side, add the following to `gravitino.conf`:
+
+```properties
+# Enable Google authentication
+gravitino.authenticators = google
+
+# Optional: Restrict to specific service accounts
+gravitino.authenticator.google.allowed-service-accounts = sa1@project.iam.gserviceaccount.com,sa2@project.iam.gserviceaccount.com
+```
+
+**Configuration properties:**
+
+| Property | Description | Default | Required | Since Version |
+|----------|-------------|---------|----------|---------------|
+| `gravitino.authenticators` | Authentication types (comma-separated). Include `google` to enable | (none) | Yes | 0.8.0 |
+| `gravitino.authenticator.google.allowed-service-accounts` | Comma-separated list of allowed service account emails. If not set, all valid Google tokens are accepted | (none) | No | 0.8.0 |
+
+You can enable multiple authenticators. Gravitino tries them in order based on token format:
+
+```properties
+# Try Google first, fall back to simple (anonymous) if no valid Google token
+gravitino.authenticators = google,simple
+```
+
+For the client side, Google authentication is primarily used with Spark Iceberg REST catalogs:
+
+#### Spark with Iceberg REST catalog
+
+**Using service account key file:**
+
+```scala
+spark.conf.set("spark.sql.catalog.gravitino", "org.apache.iceberg.spark.SparkCatalog")
+spark.conf.set("spark.sql.catalog.gravitino.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
+spark.conf.set("spark.sql.catalog.gravitino.uri", "http://localhost:9001/iceberg")
+spark.conf.set("spark.sql.catalog.gravitino.prefix", "my_catalog")
+
+// Google authentication
+spark.conf.set("spark.sql.catalog.gravitino.rest.auth-manager", "org.apache.iceberg.gcp.auth.GoogleAuthManager")
+spark.conf.set("spark.sql.catalog.gravitino.gcp.auth.credentials-path", "/path/to/service-account-key.json")
+```
+
+**Using Workload Identity (GKE) or Application Default Credentials:**
+
+```scala
+spark.conf.set("spark.sql.catalog.gravitino", "org.apache.iceberg.spark.SparkCatalog")
+spark.conf.set("spark.sql.catalog.gravitino.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
+spark.conf.set("spark.sql.catalog.gravitino.uri", "http://localhost:9001/iceberg")
+spark.conf.set("spark.sql.catalog.gravitino.prefix", "my_catalog")
+
+// Google authentication - automatically uses Workload Identity or ADC
+spark.conf.set("spark.sql.catalog.gravitino.rest.auth-manager", "org.apache.iceberg.gcp.auth.GoogleAuthManager")
+// No credentials-path needed - uses environment credentials
+```
+
+When `credentials-path` is not specified, `GoogleAuthManager` uses Application Default Credentials (ADC):
+- **GKE with Workload Identity**: Automatic credential injection via Kubernetes service account
+- **GCE**: Instance metadata service
+- **Local development**: `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+
+The `GoogleAuthManager` automatically handles ID token generation and refresh.
+
+#### Testing with curl
+
+Generate an ID token and test authentication:
+
+```bash
+# Generate ID token (requires gcloud CLI)
+TOKEN=$(gcloud auth print-identity-token --audiences=http://localhost:8090)
+
+# Make authenticated request
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     http://localhost:8090/api/metalakes
+```
+
+#### Authorization and user identity
+
+After successful authentication, the service account email becomes the authenticated principal and is used for authorization. Resources created by authenticated users have the `owner` property set:
+
+```json
+{
+  "namespace": ["my_schema"],
+  "properties": {
+    "owner": "my-service-account@my-project.iam.gserviceaccount.com"
+  }
+}
+```
 
 ### Custom mode
 

@@ -1,4 +1,22 @@
 #!/usr/bin/env python3
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
 """
 Simple test script for GoogleAuthenticator
 Tests authentication by making direct HTTP requests to Gravitino Iceberg REST API
@@ -11,28 +29,37 @@ from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 
 # Configuration
-SERVICE_ACCOUNT_KEY_PATH = "/path/to/your/gravitino-test-sa.json"
+SERVICE_ACCOUNT_KEY_PATH = "/Users/babumaheshpr/Downloads/gravitino-dev-492915-a9e195088e55.json"
 GRAVITINO_ICEBERG_REST_URL = "http://localhost:9001/iceberg"
-CATALOG_PREFIX = "test_metalake"
+GRAVITINO_SERVER_URL = "http://localhost:8090"
+CATALOG_PREFIX = "iceberg_catalog"
 
-def get_google_oauth_token(service_account_key_path):
+def get_google_oauth_token(service_account_key_path, target_audience):
     """
-    Get a Google OAuth token from a service account key file.
+    Get a Google ID token from a service account key file.
 
-    This simulates what Spark's GoogleAuthManager does.
+    Gravitino's GoogleAuthenticator expects ID tokens (JWTs), not access tokens.
+    ID tokens contain user identity claims like email and are signed by Google.
     """
     print(f"📄 Loading service account credentials from: {service_account_key_path}")
 
-    credentials = service_account.Credentials.from_service_account_file(
+    # Use IDTokenCredentials instead of Credentials to get ID token
+    credentials = service_account.IDTokenCredentials.from_service_account_file(
         service_account_key_path,
-        scopes=['https://www.googleapis.com/auth/cloud-platform']
+        target_audience=target_audience
     )
 
-    # Refresh to get the access token
+    # Refresh to get the ID token
     credentials.refresh(Request())
 
-    print(f"✅ Got OAuth token for: {credentials.service_account_email}")
-    print(f"   Token expires at: {credentials.expiry}")
+    # Extract email from the credentials
+    import json
+    import base64
+    parts = credentials.token.split('.')
+    payload = json.loads(base64.urlsafe_b64decode(parts[1] + '=='))
+
+    print(f"✅ Got ID token for: {payload['email']}")
+    print(f"   Token type: ID Token (JWT)")
     print(f"   Token (first 50 chars): {credentials.token[:50]}...")
 
     return credentials.token
@@ -53,7 +80,7 @@ def test_iceberg_rest_api(token, catalog_prefix):
 
     # Test 1: Get config (public endpoint, but still authenticated)
     print("\n[Test 1] GET /v1/config")
-    url = f"{GRAVITINO_ICEBERG_REST_URL}/v1/{catalog_prefix}/config"
+    url = f"{GRAVITINO_ICEBERG_REST_URL}/v1/config"
     print(f"   URL: {url}")
 
     try:
@@ -135,11 +162,11 @@ def test_iceberg_rest_api(token, catalog_prefix):
 def main():
     print("🚀 Starting Google Authentication Test\n")
 
-    # Step 1: Get OAuth token from service account
+    # Step 1: Get ID token from service account
     try:
-        token = get_google_oauth_token(SERVICE_ACCOUNT_KEY_PATH)
+        token = get_google_oauth_token(SERVICE_ACCOUNT_KEY_PATH, GRAVITINO_SERVER_URL)
     except Exception as e:
-        print(f"\n❌ Failed to get OAuth token: {e}")
+        print(f"\n❌ Failed to get ID token: {e}")
         print("\nMake sure:")
         print(f"  1. Service account key file exists at: {SERVICE_ACCOUNT_KEY_PATH}")
         print(f"  2. You have the google-auth library installed: pip install google-auth")
