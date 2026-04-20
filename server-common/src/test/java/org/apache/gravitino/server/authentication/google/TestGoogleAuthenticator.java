@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.apache.gravitino.Config;
 import org.apache.gravitino.exceptions.UnauthorizedException;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,8 @@ public class TestGoogleAuthenticator {
   public void setUp() {
     authenticator = new GoogleAuthenticator();
     config = mock(Config.class);
+    // Set default principalFields
+    when(config.get(GoogleAuthConfig.PRINCIPAL_FIELDS)).thenReturn(Arrays.asList("email"));
   }
 
   @Test
@@ -90,8 +93,10 @@ public class TestGoogleAuthenticator {
 
   @Test
   public void testSupportsTokenWithBearerButNotJWT() {
+    authenticator.initialize(config);
+    // Opaque tokens (like access tokens) are now supported and will be validated via tokeninfo API
     String token = "Bearer invalid-token";
-    assertFalse(authenticator.supportsToken(token.getBytes(StandardCharsets.UTF_8)));
+    assertTrue(authenticator.supportsToken(token.getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test
@@ -131,19 +136,18 @@ public class TestGoogleAuthenticator {
    * would be signed and have additional claims.
    */
   /**
-   * Test that malformed tokens return false for isLikelyGoogleToken.
+   * Test that supports token correctly detects Bearer tokens.
    *
-   * <p>Note: Creating valid JWT structures for unit testing requires complex setup with proper
-   * signatures. These tests verify basic error handling. Full token validation would be better
-   * tested in integration tests with real Google service account credentials.
+   * <p>Note: The strategy pattern delegates token format detection to individual strategies. Full
+   * token validation would be better tested in integration tests with real Google service account
+   * credentials.
    */
   @Test
-  public void testIsLikelyGoogleTokenWithMalformedToken() {
+  public void testSupportsTokenDelegatesTest() {
     authenticator.initialize(config);
-    // Malformed token should return false
-    assertFalse(authenticator.isLikelyGoogleToken("not-a-jwt-token"));
-    // Empty token should return false
-    assertFalse(authenticator.isLikelyGoogleToken(""));
+    // Any Bearer token should be supported (strategies decide which one handles it)
+    String token = "Bearer some-token";
+    assertTrue(authenticator.supportsToken(token.getBytes(StandardCharsets.UTF_8)));
   }
 
   /**

@@ -109,7 +109,11 @@ Google authentication allows clients to authenticate using Google Cloud Platform
 - **Application Default Credentials (ADC)** - Automatic credential detection across all GCP environments
 
 :::info
-Gravitino validates **Google ID tokens** (JWT format), not access tokens. ID tokens contain identity claims (email, issuer) and are signed by Google's identity provider. Access tokens are opaque strings used only for Google API authorization.
+Gravitino supports **both ID tokens and access tokens** from Google:
+- **ID tokens (JWT format)**: Validated locally using Google's public keys. Contain identity claims (email, issuer).
+- **Access tokens (opaque)**: Validated by calling Google's tokeninfo API. These are sent by Apache Iceberg's `GoogleAuthManager` and standard OAuth2 flows.
+
+The authenticator automatically detects the token type and validates accordingly.
 :::
 
 On the server side, add the following to `gravitino.conf`:

@@ -18,6 +18,7 @@
  */
 package org.apache.gravitino.server.authentication.google;
 
+import java.util.List;
 import org.apache.gravitino.config.ConfigBuilder;
 import org.apache.gravitino.config.ConfigConstants;
 import org.apache.gravitino.config.ConfigEntry;
@@ -61,4 +62,32 @@ public interface GoogleAuthConfig {
           .version(ConfigConstants.VERSION_0_8_0)
           .stringConf()
           .create();
+
+  /**
+   * Token claim field(s) to use as principal identity. Comma-separated list for fallback in order.
+   *
+   * <p>Example: "email,sub"
+   *
+   * <p>Google tokens contain multiple claims. This config specifies which claim(s) to extract as
+   * the authenticated principal. The authenticator will try each field in order and use the first
+   * non-null value found.
+   *
+   * <p>Common fields in Google tokens:
+   *
+   * <ul>
+   *   <li><b>email</b>: Service account or user email (e.g.,
+   *       "my-sa@project.iam.gserviceaccount.com")
+   *   <li><b>sub</b>: Unique subject ID (e.g., "108234567890123456789")
+   * </ul>
+   *
+   * <p>Default: "email"
+   */
+  ConfigEntry<List<String>> PRINCIPAL_FIELDS =
+      new ConfigBuilder(GOOGLE_AUTH_CONFIG_PREFIX + "principalFields")
+          .doc(
+              "Token claim field(s) to use as principal identity. Comma-separated list for fallback in order (e.g., 'email,sub'). Default: 'email'.")
+          .version(ConfigConstants.VERSION_0_8_0)
+          .stringConf()
+          .toSequence()
+          .createWithDefault(java.util.Arrays.asList("email"));
 }

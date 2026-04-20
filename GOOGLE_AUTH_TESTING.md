@@ -21,6 +21,15 @@
 
 This guide shows how to test the GoogleAuthenticator implementation with real clients.
 
+## Token Types Supported
+
+Gravitino's GoogleAuthenticator supports **two types of Google tokens**:
+
+1. **ID Tokens (JWT format)**: Contains identity claims like email and issuer. Validated locally using Google's public keys. Used by the Python test script below.
+2. **Access Tokens (opaque)**: Validated by calling Google's tokeninfo API. **These are the tokens sent by Apache Iceberg's `GoogleAuthManager`** when using Spark/Trino with Iceberg REST catalogs.
+
+The authenticator automatically detects which type of token it receives and validates accordingly, so both Spark (with Iceberg) and custom clients work seamlessly.
+
 ## Prerequisites
 
 1. **Google Cloud Project** with billing enabled

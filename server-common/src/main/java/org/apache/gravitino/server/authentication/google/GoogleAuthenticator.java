@@ -18,15 +18,11 @@
  */
 package org.apache.gravitino.server.authentication.google;
 
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.json.webtoken.JsonWebSignature;
-import com.google.api.client.json.webtoken.JsonWebToken.Payload;
+import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.oauth2.TokenVerifier;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.gravitino.Config;
@@ -38,11 +34,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * GoogleAuthenticator validates Google OAuth2 ID tokens.
+ * GoogleAuthenticator validates Google OAuth2 tokens (both ID tokens and access tokens).
  *
- * <p>This authenticator validates tokens issued by Google (https://accounts.google.com) using
- * Google's public keys. It does NOT require Gravitino to have a service account - token validation
- * uses public key cryptography.
+ * <p>This authenticator supports two types of Google tokens:
+ *
+ * <ul>
+ *   <li><b>ID tokens (JWT format)</b>: Validated locally using Google's public keys. Contains
+ *       identity claims like email and issuer. Used by clients that explicitly request ID tokens.
+ *   <li><b>Access tokens (opaque)</b>: Validated by calling Google's tokeninfo API. These are the
+ *       tokens sent by Iceberg's GoogleAuthManager and standard OAuth2 flows.
+ * </ul>
+ *
+ * <p>The authenticator automatically detects the token type and uses the appropriate validation
+ * method.
  *
  * <p>Configuration:
  *
@@ -57,17 +61,15 @@ import org.slf4j.LoggerFactory;
  * <p>Token validation flow:
  *
  * <ol>
- *   <li>Validates token signature using Google's public keys (fetched from
- *       https://www.googleapis.com/oauth2/v3/certs)
- *   <li>Verifies token not expired
- *   <li>Checks issuer is "https://accounts.google.com"
- *   <li>Optionally checks audience matches configured allowed audiences
- *   <li>Extracts email (service account identity) from token
+ *   <li>Detects if token is JWT (ID token) or opaque (access token)
+ *   <li>For ID tokens: Validates signature using Google's public keys, checks expiration and issuer
+ *   <li>For access tokens: Calls Google's tokeninfo API to validate and extract claims
+ *   <li>Extracts email (service account identity) from token claims
  *   <li>Optionally checks email is in allowed service accounts list
  *   <li>Returns UserPrincipal with email as username
  * </ol>
  *
- * <p>Example usage with Spark:
+ * <p>Example usage with Spark Iceberg REST:
  *
  * <pre>
  * spark.sql.catalog.gravitino.rest.auth-manager = org.apache.iceberg.gcp.auth.GoogleAuthManager
@@ -81,11 +83,10 @@ public class GoogleAuthenticator implements Authenticator {
   private static final Logger LOG = LoggerFactory.getLogger(GoogleAuthenticator.class);
 
   private static final String GOOGLE_ISSUER = "https://accounts.google.com";
-  private static final String EMAIL_CLAIM = "email";
-  private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-  private TokenVerifier tokenVerifier;
+  private List<GoogleTokenStrategy> strategies;
   private List<String> allowedServiceAccounts;
+  private List<String> principalFields;
 
   @Override
   public boolean isDataFromToken() {
@@ -95,18 +96,32 @@ public class GoogleAuthenticator implements Authenticator {
   @Override
   public void initialize(Config config) throws RuntimeException {
     try {
-      // Build token verifier with Google's public key endpoints
-      TokenVerifier.Builder builder = TokenVerifier.newBuilder().setIssuer(GOOGLE_ISSUER);
+      // Initialize authentication strategies
+      this.strategies = new ArrayList<>();
 
-      // Optional: restrict allowed audiences
-      String allowedAudiences = config.get(GoogleAuthConfig.ALLOWED_AUDIENCES);
-      if (StringUtils.isNotBlank(allowedAudiences)) {
-        // TokenVerifier expects a single audience, but we support comma-separated list
-        // We'll validate audience manually in authenticateToken
+      // Parse principal fields (which claims to extract)
+      this.principalFields = config.get(GoogleAuthConfig.PRINCIPAL_FIELDS);
+      LOG.info("Google authenticator configured with principal fields: {}", principalFields);
+
+      // Parse allowed audiences for ID token validation
+      String allowedAudiencesConfig = config.get(GoogleAuthConfig.ALLOWED_AUDIENCES);
+      List<String> allowedAudiences = null;
+      if (StringUtils.isNotBlank(allowedAudiencesConfig)) {
+        allowedAudiences =
+            List.of(allowedAudiencesConfig.split(",")).stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
         LOG.info("Google authenticator configured with allowed audiences: {}", allowedAudiences);
       }
 
-      this.tokenVerifier = builder.build();
+      // Strategy 1: ID Token (JWT) - try first as it's more efficient (no API call)
+      TokenVerifier tokenVerifier = TokenVerifier.newBuilder().setIssuer(GOOGLE_ISSUER).build();
+      this.strategies.add(new IdTokenStrategy(tokenVerifier, allowedAudiences, principalFields));
+
+      // Strategy 2: Access Token (opaque) - fallback, requires API call to tokeninfo
+      this.strategies.add(
+          new AccessTokenStrategy(new NetHttpTransport().createRequestFactory(), principalFields));
 
       // Optional: restrict allowed service accounts
       String allowedSaConfig = config.get(GoogleAuthConfig.ALLOWED_SERVICE_ACCOUNTS);
@@ -121,7 +136,8 @@ public class GoogleAuthenticator implements Authenticator {
             this.allowedServiceAccounts);
       }
 
-      LOG.info("Google authenticator initialized successfully");
+      LOG.info(
+          "Google authenticator initialized successfully (supports ID tokens and access tokens)");
     } catch (Exception e) {
       LOG.error("Failed to initialize Google authenticator", e);
       throw new RuntimeException("Failed to initialize Google authenticator", e);
@@ -149,40 +165,38 @@ public class GoogleAuthenticator implements Authenticator {
     }
 
     try {
-      // Validate token signature, expiration, and issuer using Google's public keys
-      JsonWebSignature jws = tokenVerifier.verify(token);
-      Preconditions.checkNotNull(jws, "Token verification returned null");
+      // Try each strategy until one succeeds
+      String authClaim = null;
+      for (GoogleTokenStrategy strategy : strategies) {
+        if (strategy.supports(token)) {
+          LOG.debug("Using {} to authenticate token", strategy.getClass().getSimpleName());
+          authClaim = strategy.extractClaim(token);
+          break;
+        }
+      }
 
-      // Extract email from token payload
-      Payload payload = jws.getPayload();
-      String email = (String) payload.get(EMAIL_CLAIM);
-
-      if (StringUtils.isBlank(email)) {
-        LOG.warn("Token missing email claim");
-        throw new UnauthorizedException("Token missing email claim");
+      if (authClaim == null) {
+        throw new UnauthorizedException("No authentication strategy supports this token type");
       }
 
       // Optional: check if service account is in allowed list
       if (allowedServiceAccounts != null && !allowedServiceAccounts.isEmpty()) {
-        if (!allowedServiceAccounts.contains(email)) {
-          LOG.warn("Service account {} is not in allowed list: {}", email, allowedServiceAccounts);
+        if (!allowedServiceAccounts.contains(authClaim)) {
+          LOG.warn("Service account {} is not in allowed list: {}", authClaim, allowedServiceAccounts);
           throw new UnauthorizedException(
-              "Service account %s is not allowed to access Gravitino", email);
+              "Service account %s is not allowed to access Gravitino", authClaim);
         }
       }
 
-      LOG.debug("Successfully authenticated Google service account: {}", email);
+      LOG.debug("Successfully authenticated Google service account: {}", authClaim);
 
-      // Create UserPrincipal with the service account email
+      // Create UserPrincipal with the service account authClaim
       // Keep the raw Authorization header value for downstream services
-      return new UserPrincipal(email, authData);
+      return new UserPrincipal(authClaim, authData);
 
     } catch (UnauthorizedException e) {
       // Re-throw validation errors without wrapping
       throw e;
-    } catch (TokenVerifier.VerificationException e) {
-      LOG.warn("Google token verification failed: {}", e.getMessage());
-      throw new UnauthorizedException("Google token verification failed: %s", e.getMessage());
     } catch (Exception e) {
       LOG.error("Failed to authenticate Google token: {}", e.getMessage(), e);
       throw new UnauthorizedException(e, "Failed to authenticate Google token");
@@ -205,35 +219,13 @@ public class GoogleAuthenticator implements Authenticator {
       return false;
     }
 
-    // Check if token looks like a Google token by attempting to parse it
-    // Google tokens are JWTs with specific structure
-    try {
-      // Try to parse as JWT - Google tokens should parse successfully
-      JsonWebSignature.parse(JSON_FACTORY, token);
-      // Additional check: Google tokens have "accounts.google.com" as issuer
-      // We'll do a lightweight check here
-      return isLikelyGoogleToken(token);
-    } catch (Exception e) {
-      return false;
+    // Check if any strategy supports this token
+    for (GoogleTokenStrategy strategy : strategies) {
+      if (strategy.supports(token)) {
+        return true;
+      }
     }
-  }
 
-  /**
-   * Performs a lightweight check to determine if a token is likely a Google token. This helps
-   * distinguish Google tokens from other OAuth2/JWT tokens.
-   *
-   * @param token The JWT token string
-   * @return true if the token appears to be from Google
-   */
-  @VisibleForTesting
-  boolean isLikelyGoogleToken(String token) {
-    try {
-      // Parse the token to check issuer without full validation
-      JsonWebSignature jws = JsonWebSignature.parse(JSON_FACTORY, token);
-      Object issuer = jws.getPayload().get("iss");
-      return GOOGLE_ISSUER.equals(issuer);
-    } catch (Exception e) {
-      return false;
-    }
+    return false;
   }
 }
